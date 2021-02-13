@@ -17,6 +17,7 @@ let field;
 let bodies = [];
 let vehicles = [];
 let properties;
+let shape;
 let shapes = ['circle', 'trap', 'polygon', 'rect', 'tri'];
 let path;
 let matterMouse;
@@ -31,18 +32,19 @@ function setup() {
   setEngine(canvas);
   floor = new PerlinFloor(140, 70);
   field = new ForceContainer(mouseX, mouseY, 120, 120);
-  for (let i = 0; i < 35; i++) {
+  for (let i = 0; i < 120; i++) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
-    let shape = addRandomOfType(shapeName);
+    addRandomOfType(shapeName);
   }
 }
 //TODO check if Continuous collisions is implemented now
 //main loop
 function draw() {
+
   background(55);
   field.x = mouseX;
   field.y = mouseY;
-  field.show(8);
+  field.show(12);
   floor.show();
   if (vehicles.length < 35) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
@@ -51,18 +53,19 @@ function draw() {
 
   Engine.update(engine);
   for (let i = vehicles.length - 1; i >= 0; i--) {
-    if (vehicles[i].body.position.x < -40 || vehicles[i].body.position.x > width + 40 || vehicles[i].body.position.y < -40 || vehicles[i].body.position.y > height + 40) {
-      World.remove(world, vehicles[i].body);
+    shape = vehicles[i];
+    if (shape.body.position.x < -40 || shape.body.position.x > width + 40 || shape.body.position.y < -40 || shape.body.position.y > height + 40) {
+      World.remove(world, shape.body);
       vehicles.splice(i, 1);
     } else {
-      if (vehicles[i].isContained(field.x, field.y, field.width, field.height)) {
-        field.applyForce(vehicles[i].body);
-        //  Body.applyForce(vehicles[i].body, vehicles[i].body.position, field.acc);
+      if (shape.isContained(field.x, field.y, field.width, field.height)) {
+        field.applyForce(shape.body);
+        //  Body.applyForce(shape.body, shape.body.position, field.acc);
       }
-      vehicles[i].show();
+      shape.show();
       //drives toward a shape with similar area
-      //vehicles[i].setTarget(vehicles);
-      //vehicles[i].seek(vehicles[i].target);
+      //shape.setTarget(vehicles);
+      //shape.seek(shape.target);
     }
   }
   //  noLoop();

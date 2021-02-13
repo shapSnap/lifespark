@@ -390,6 +390,7 @@ class ForceContainer {
     this.width = w;
     this.height = h;
     this.reducer = 0.0001;
+    this.maxDeflection = PI / 4;
     if (forceVector == null) {
       this.acc = Matter.Vector.create(random(-1, 1), random(-1, 1));
       this.acc = Matter.Vector.normalise(this.acc);
@@ -401,16 +402,13 @@ class ForceContainer {
   }
   //
   applyForce(body) {
-    //  let multi = map(body.position.y, this.y - this.height / 2, this.y + this.height / 2, 0.05, 1);
-    //let ang = p5.Vector.fromAngle(map(body.position.x, this.x - this.width / 2, this.x + this.width / 2, -PI * 3 / 4, -PI / 4));
-    // ang.normalize();
-    // ang.setMag(0.0001);
-    // let mForce = Matter.Vector.create(ang.x, ang.y);
-    // mForce = Matter.Vector.add(this.acc, mForce);
-    // //console.log(mForce.x);
-    // //mForce = Matter.Vector.normalise(mForce);
-    // mForce = Matter.Vector.mult(mForce, multi * 0.001);
-    let mForce = Matter.Vector.mult(this.acc, this.reducer);
+
+    let pos = createVector(body.position.x - this.x, body.position.y - this.y);
+    let angle = map(this.getAngle(pos), -PI, PI, -this.maxDeflection, this.maxDeflection);
+    let dest = createVector(this.acc.x, this.acc.y);
+    dest.rotate(angle);
+    let mForce = Matter.Vector.create(dest.x, dest.y);
+    mForce = Matter.Vector.mult(mForce, this.reducer);
     Body.applyForce(body, body.position, mForce);
   }
   //returns a unit vector pointed u/d/l/r based on this.acc
@@ -426,26 +424,41 @@ class ForceContainer {
 
     return (mForce);
   }
+  getAngle(pos) {
+    let v = createVector(this.acc.x, this.acc.y);
+    return (v.angleBetween(pos));
+  }
   show(n) {
     push();
     rectMode(CENTER);
     stroke(color('rgba(255, 255, 155, .4)'));
     strokeWeight(4);
     noFill();
-    rect(this.x - 2, this.y - 2, this.width, this.height);
-    //translate(this.x, this.y);
+    translate(this.x, this.y);
+    rect(0, 0, this.width, this.height);
     strokeWeight(3);
     if (n != null) {
       let pos;
       let dest;
-      for (let i = 0; i < n; i++) {
-        for (let j = 0; j < n; j++) {
-          pos = createVector(map(i, 0, n, -this.width / 2, this.width / 2), map(j, 0, n, -this.height / 2, this.height / 2));
-          dest = Matter.Vector.mult(this.acc, 30);
-          line(this.x + pos.x, this.y + pos.y, this.x + dest.x + pos.x, this.y + dest.y + pos.y);
-          ellipse(this.x + dest.x + pos.x, this.y + dest.y + pos.y, 4);
+      let angle;
+      for (let i = 0; i < n + 1; i++) {
+        for (let j = 0; j < n + 1; j++) {
+          pos = createVector(map(i, 0, n + 1, -this.width * 2 / 5, this.width * 3 / 5), map(j, 0, n, -this.height / 2, this.height / 2));
+          angle = map(this.getAngle(pos), -PI, PI, -this.maxDeflection, this.maxDeflection);
+          dest = createVector(this.acc.x, this.acc.y);
+          dest.mult(30);
+          dest.rotate(angle);
+          line(pos.x, pos.y, dest.x + pos.x, dest.y + pos.y);
+          ellipse(dest.x + pos.x, dest.y + pos.y, 4);
         }
       }
+      pos = createVector(0, 0);
+      dest = createVector(this.acc.x, this.acc.y)
+      dest.mult(50);
+      stroke(color('rgba(155, 255, 255, 1)'));
+      strokeWeight(6);
+      line(pos.x, pos.y, dest.x + pos.x, dest.y + pos.y);
+      ellipse(dest.x + pos.x, dest.y + pos.y, 8);
     }
     pop();
   }

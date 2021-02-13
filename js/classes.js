@@ -389,7 +389,7 @@ class ForceContainer {
     this.y = y;
     this.width = w;
     this.height = h;
-    this.reducer = 0.0001;
+    this.reducer = 0.00002;
     this.maxDeflection = PI / 4;
     if (forceVector == null) {
       this.acc = Matter.Vector.create(random(-1, 1), random(-1, 1));
@@ -411,18 +411,12 @@ class ForceContainer {
     mForce = Matter.Vector.mult(mForce, this.reducer);
     Body.applyForce(body, body.position, mForce);
   }
-  //returns a unit vector pointed u/d/l/r based on this.acc
-  getForce(x, y) {
-    let multi = map(y, this.y - this.height / 2, this.y + this.height / 2, 0.05, 1);
-    let ang = p5.Vector.fromAngle(map(x, this.x - this.width / 2, this.x + this.width / 2, -PI * 3 / 4, -PI / 4));
-    ang.normalize();
-    let mForce = Matter.Vector.create(ang.x, ang.y);
-    mForce = Matter.Vector.add(this.acc, mForce);
-    //console.log(mForce);
-    //mForce = Matter.Vector.normalise(mForce);
-    mForce = Matter.Vector.mult(mForce, multi * 0.001);
-
-    return (mForce);
+  perlinShift() {
+    let v = createVector(this.acc.x, this.acc.y);
+    let angle = map(noise(frameCount), 0, 1, -PI / 12, PI / 12);
+    v.rotate(angle);
+    this.acc.x = v.x;
+    this.acc.y = v.y;
   }
   getAngle(pos) {
     let v = createVector(this.acc.x, this.acc.y);

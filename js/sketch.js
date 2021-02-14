@@ -78,7 +78,7 @@ function draw() {
   }
   if (isPaused) {
     for (let f of fields) {
-      f.show(8);
+      f.show();
     }
     noLoop();
   }
@@ -102,13 +102,18 @@ function setEngine(canvas) {
 function fillFields() {
   let size = 120;
   let angle;
+  let angle2;
   let unitV = p5.Vector.random2D();
+  let unitV2 = p5.Vector.random2D();
   unitV.normalize();
+  unitV2.normalize();
   for (let i = 0; i < width / size; i++) {
     for (let j = 0; j < height / size; j++) {
       angle = map(noise(i + j), 0, 1, -PI / 2, PI / 2);
+      angle2 = map(noise(i + j + size), 0, 1, -PI / 2, PI / 2);
       unitV.rotate(angle);
       fields.push(new ForceContainer(i * size, j * size, size, size, unitV));
+      fields.push(new ForceContainer(i * size + size / 2, j * size + size / 2, size, size, unitV));
     }
   }
 }
@@ -122,7 +127,7 @@ function addRandomOfType(type) {
       l: random(35, 70)
     },
     x: random(width),
-    y: random(-20, height * 0.75)
+    y: random(-20, -10)
   };
   //console.log('Add Random: ' + type);
   let h = random(12, 35);

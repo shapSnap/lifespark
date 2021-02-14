@@ -391,6 +391,7 @@ class ForceContainer {
     this.height = h;
     this.reducer = 0.00002;
     this.maxDeflection = PI / 4;
+    this.maxDrift = 3;
     if (forceVector == null) {
       this.acc = Matter.Vector.create(random(-1, 1), random(-1, 1));
       this.acc = Matter.Vector.normalise(this.acc);
@@ -402,7 +403,7 @@ class ForceContainer {
   }
   //
   applyForce(body) {
-
+    //TODO: find angle between body.velocity and this.acc - add angular velocity
     let pos = createVector(body.position.x - this.x, body.position.y - this.y);
     let angle = map(this.getAngle(pos), -PI, PI, -this.maxDeflection, this.maxDeflection);
     let dest = createVector(this.acc.x, this.acc.y);
@@ -413,7 +414,16 @@ class ForceContainer {
   }
   perlinShift() {
     let v = createVector(this.acc.x, this.acc.y);
-    let angle = map(noise(frameCount), 0, 1, -PI / 12, PI / 12);
+    let angle = map(noise(frameCount / 100), 0, 1, -PI / 12, PI / 12);
+    // let dx = map(noise(frameCount), 0, 1, -this.maxDrift, this.maxDrift);
+    // let dy = map(noise(frameCount), 0, 1, -this.maxDrift, this.maxDrift);
+    // let dx = random(-this.maxDrift, this.maxDrift);
+    // let dy = random(-this.maxDrift, this.maxDrift);
+    //
+    // this.x += dx;
+    // this.y += dy;
+    // this.x = constrain(this.x, 0, width);
+    // this.y = constrain(this.y, 0, height);
     v.rotate(angle);
     this.acc.x = v.x;
     this.acc.y = v.y;

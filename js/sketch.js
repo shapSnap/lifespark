@@ -11,6 +11,7 @@ const Engine = Matter.Engine,
   Body = Matter.Body,
   Bodies = Matter.Bodies;
 let engine;
+let images;
 let isPaused = false;
 let world;
 let floor;
@@ -24,36 +25,48 @@ let shapes = ['circle', 'trap', 'polygon', 'rect', 'tri'];
 let path;
 let matterMouse;
 let mConstraint;
+let globalDriftVector = p5.Vector.random2D(); //.normalize().mult(0.00006);
+let reducer = 0.00004;
 
 function preload() {
-
+  images = new ImageData();
 }
 
 function setup() {
   const canvas = createCanvas(900, 600);
   setEngine(canvas);
   floor = new PerlinFloor(140, 70);
-  //field = new ForceContainer(mouseX, mouseY, 120, 120);
-  //fields.push(field);
-  fillFields();
-  for (let i = 0; i < 120; i++) {
+  images.setContext(floor);
+  images.createClippingPaths();
+  field = new ForceContainer(450, height - 120, 120, 170, createVector(0, -1));
+  fields.push(field);
+  //  fillFields();
+  for (let i = 0; i < 40; i++) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     addRandomOfType(shapeName);
+    //let shape = addTriangle();
   }
 }
 //TODO check if Continuous collisions is implemented now
 //main loop
 function draw() {
 
-  background(55);
+  images.drawBackground();
+  push();
+  images.drawClipped();
+  //images.drawClippingRegions();
+  //images.drawUnderClipping();
+  pop();
   //field.x = mouseX;
   //field.y = mouseY;
-  //field.show(12);
-  floor.show();
+  field.show(12);
+  //floor.show();
   if (vehicles.length < 120) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     let shape = addRandomOfType(shapeName);
+    //let shape = addTriangle();
   }
+  globalDriftVector.rotate(map(noise(frameCount * 100), 0, 1, -PI / 2, PI / 2));
 
   Engine.update(engine);
   for (let i = vehicles.length - 1; i >= 0; i--) {
@@ -62,21 +75,24 @@ function draw() {
       World.remove(world, shape.body);
       vehicles.splice(i, 1);
     } else {
+      shape.applyGlobalDrift(globalDriftVector);
       for (let f of fields) {
         if (shape.isContained(f.x, f.y, f.width, f.height)) {
-          f.perlinShift();
-          f.applyForce(shape.body);
+          //f.perlinShift();
+          f.applyForce(shape);
           //f.show(1);
           //  Body.applyForce(shape.body, shape.body.position, field.acc);
         }
       }
       shape.show();
+      //shape.showVector();
       //drives toward a shape with similar area
       //shape.setTarget(vehicles);
       //shape.seek(shape.target);
     }
   }
   if (isPaused) {
+    showForces();
     for (let f of fields) {
       f.show();
     }
@@ -118,6 +134,30 @@ function fillFields() {
   }
 }
 
+function showForces() {
+  let size = 35;
+  let inc = 0.2;
+  let unitV;
+  let angle;
+  for (let i = 0; i < width / size; i++) {
+    for (let j = 0; j < height / size; j++) {
+      unitV = globalDriftVector.copy();
+      unitV.normalize();
+      unitV.mult(reducer);
+      angle = map(noise(i * inc, j * inc), 0, 1, -PI, PI);
+      unitV.rotate(angle);
+      push();
+      //stroke(color('rgba(255, 255, 155, .4)'));
+      strokeWeight(4);
+      noFill();
+      translate(i * size, j * size);
+      line(0, 0, unitV.x * 800000, unitV.y * 800000);
+      ellipse(unitV.x * 800000, unitV.y * 800000, 4);
+      pop();
+    }
+  }
+}
+
 function addRandomOfType(type) {
   let p = {
     type: type,
@@ -154,7 +194,24 @@ function addRandomOfType(type) {
     default:
   }
   vehicles.push(new Vehicle(p));
-  vehicles[vehicles.length - 1].setTarget(vehicles);
+  //  vehicles[vehicles.length - 1].setTarget(vehicles);
+}
+
+function addTriangle() {
+  let p = {
+    type: 'tri',
+    hsl: {
+      h: random(360),
+      s: 100,
+      l: random(35, 70)
+    },
+    x: random(width),
+    y: random(-20, -10),
+    w: 30,
+    h: 50
+  };
+  vehicles.push(new Vehicle(p));
+  //  vehicles[vehicles.length - 1].setTarget(vehicles);
 }
 
 function bodyForce(body) {

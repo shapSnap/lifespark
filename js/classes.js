@@ -69,8 +69,47 @@ class Vehicle extends ShapeFromType {
     this.maxSpeed = .0001;
     this.maxAngle = PI / 4;
     this.target = this.body;
+    this.unitV = null;
   }
+  applyGlobalDrift(cornerV) {
+    let inc = 0.2;
+    // let x = map(this.body.position.x, 0, width, 0, 1000);
+    // let y = map(this.body.position.y, 0, height, 0, 1000);
+    let x = this.body.position.x;
+    let y = this.body.position.y;
+    let angle;
+    let unitV = cornerV.copy();
+    unitV.normalize();
+    unitV.mult(reducer);
+    angle = map(noise(x * inc, y * inc), 0, 1, -PI, PI);
+    unitV.rotate(angle);
+    this.applyForce(this.body.position, unitV);
+    this.unitV = unitV;
+  }
+  applyForce(position, force) {
+    Body.applyForce(this.body, position, force);
+    let mag = 0.001;
+    let vel = createVector(this.body.velocity.x, this.body.velocity.y);
+    let angle = vel.angleBetween(force);
+    if (angle > 0) {
+      //CCW
+      if (angle < HALF_PI) {
+        Body.setAngularVelocity(this.body, this.body.angularVelocity - map(angle, 0, HALF_PI, 0, mag));
+        //CW
+      } else {
+        Body.setAngularVelocity(this.body, this.body.angularVelocity + map(angle, HALF_PI, PI, 0, mag));
+      }
+    } else {
+      //CW
+      if (angle > -HALF_PI) {
+        Body.setAngularVelocity(this.body, this.body.angularVelocity - map(angle, 0, -HALF_PI, 0, mag));
+        //CCW
+      } else {
+        Body.setAngularVelocity(this.body, this.body.angularVelocity + map(angle, -HALF_PI, -PI, 0, mag));
+      }
+    }
 
+  }
   setTarget(bodies) {
     let target = this.body;
     let areaD = null;
@@ -86,6 +125,15 @@ class Vehicle extends ShapeFromType {
       }
     }
     this.target = target;
+  }
+  showVector() {
+    push();
+    //stroke(color('rgba(255, 255, 155, .4)'));
+    strokeWeight(4);
+    noFill();
+    translate(this.body.position.x, this.body.position.y);
+    line(0, 0, this.unitV.x * 2000000, this.unitV.y * 2000000);
+    pop();
   }
   //seeking behavior with angle limits
   seekBroken(target) {
@@ -143,6 +191,7 @@ class Vehicle extends ShapeFromType {
   }
 }
 
+//each section of the floor is a triangle. The 1st two vertices are always the bottom two points
 class PerlinFloor {
   constructor(qty, peakHeight) {
     this.hsl = {
@@ -166,7 +215,7 @@ class PerlinFloor {
     let v = {};
     let size = width / qty;
     let x = -size / 2;
-    let y = height + peakH * 0.48;
+    let y = height - peakH * 0.25;
     startPeak = map(noise(x), 0, 1, peakH * 2, peakH * 8);
     while (x < width - size / 3) {
       radius = Math.floor(random(size * 0.75, size * 1.25));
@@ -176,19 +225,46 @@ class PerlinFloor {
         endPeak = map(noise(x / 5), 0, 1, peakH * 4, peakH * 8);
       }
       x += radius;
-      verts.push({
-        x: x,
-        y: y
-      });
-      verts.push({
-        x: x - radius,
-        y: y - startPeak
-      });
-      verts.push({
-        x: x + radius,
-        y: y - endPeak
-      });
+      //ensures a two dimensional triangle
+      if (startPeak == endPeak) {
+        startPeak++;
+      }
+      //slope is negative
+      if (startPeak > endPeak) {
+        //right corner
+        verts.push({
+          x: x + radius,
+          y: y - endPeak
+        });
+        //bottom left corner
+        verts.push({
+          x: x - radius,
+          y: y - endPeak
+        });
+        //top left corner
+        verts.push({
+          x: x - radius,
+          y: y - startPeak
+        });
+      } else {
+        //bottom right corner
+        verts.push({
+          x: x + radius,
+          y: y - startPeak
+        });
+        //bottom left corner
+        verts.push({
+          x: x - radius,
+          y: y - startPeak
+        });
+        //top right corner
+        verts.push({
+          x: x + radius,
+          y: y - endPeak
+        });
+      }
       this.bodies.push(this.sectionTriangle(verts));
+      verts.pop();
       verts.pop();
       verts.pop();
       verts.pop();
@@ -212,6 +288,7 @@ class PerlinFloor {
     let options = {
       isStatic: true
     }
+    //center the triangle's mass on the centroid of the tri
     return (Bodies.fromVertices(sumX / 3, sumY / 3, bodyV, options));
   }
   show() {
@@ -382,6 +459,17 @@ class Mote {
   }
 }
 
+class Volcanoes {
+  constructor(frequency, lifespan, magnitude, drift) {
+    this.freq = frequency;
+    this.life = lifespan;
+    this.acc = acc;
+  }
+  erupt() {
+
+  }
+
+}
 //expected use: forceVector = a unit vector. in applying a force, reduce by .reducer
 class ForceContainer {
   constructor(x, y, w, h, forceVector) {
@@ -389,8 +477,8 @@ class ForceContainer {
     this.y = y;
     this.width = w;
     this.height = h;
-    this.reducer = 0.00002;
-    this.maxDeflection = PI / 4;
+    this.reducer = 0.0001;
+    this.maxDeflection = PI / 3;
     this.maxDrift = 3;
     if (forceVector == null) {
       this.acc = Matter.Vector.create(random(-1, 1), random(-1, 1));
@@ -402,15 +490,15 @@ class ForceContainer {
     }
   }
   //
-  applyForce(body) {
+  applyForce(shape) {
     //TODO: find angle between body.velocity and this.acc - add angular velocity
-    let pos = createVector(body.position.x - this.x, body.position.y - this.y);
-    let angle = map(this.getAngle(pos), -PI, PI, -this.maxDeflection, this.maxDeflection);
+    let pos = createVector(shape.body.position.x - this.x, shape.body.position.y - this.y);
+    let angle = map(this.getAngle(pos), PI, -PI, -this.maxDeflection, this.maxDeflection);
     let dest = createVector(this.acc.x, this.acc.y);
     dest.rotate(angle);
     let mForce = Matter.Vector.create(dest.x, dest.y);
     mForce = Matter.Vector.mult(mForce, this.reducer);
-    Body.applyForce(body, body.position, mForce);
+    shape.applyForce(shape.body.position, createVector(mForce.x, mForce.y));
   }
   perlinShift() {
     let v = createVector(this.acc.x, this.acc.y);
@@ -448,7 +536,7 @@ class ForceContainer {
       for (let i = 0; i < n + 1; i++) {
         for (let j = 0; j < n + 1; j++) {
           pos = createVector(map(i, 0, n + 1, -this.width * 2 / 5, this.width * 3 / 5), map(j, 0, n, -this.height / 2, this.height / 2));
-          angle = map(this.getAngle(pos), -PI, PI, -this.maxDeflection, this.maxDeflection);
+          angle = map(this.getAngle(pos), PI, -PI, -this.maxDeflection, this.maxDeflection);
           dest = createVector(this.acc.x, this.acc.y);
           dest.mult(30);
           dest.rotate(angle);
@@ -466,4 +554,95 @@ class ForceContainer {
     }
     pop();
   }
+}
+
+//Instances created outside of preload() may result in failure
+class ImageData {
+  constructor() {
+    this.ctx = null;
+    this.floor = null;
+    this.clipShapes = [];
+    this.clipPaths = new Path2D();
+    //credit to "LuminousDragonGames"
+    this.img = loadImage('img/lava.png');
+    //no credit
+    this.sandImg = loadImage('img/sandTiled.png');
+    //non-required credit to http://www.benkyoustudio.com
+    this.stoneImg = loadImage('img/stoneTiled.png');
+  }
+  // two of each floor triangle's vertices are the bottom, a higher y value
+  //one has a different x value, the difference is the width of a floor panel
+  setContext(floor) {
+    let x = 0;
+    let dx = null;
+    let y = null;
+    this.ctx = drawingContext;
+    for (let tri of floor.bodies) {
+      x = min(tri.vertices[0].x, tri.vertices[1].x, tri.vertices[2].x);
+      dx = max(tri.vertices[0].x, tri.vertices[1].x, tri.vertices[2].x);
+      y = max(tri.vertices[0].y, tri.vertices[1].y);
+      this.clipShapes.push(tri.vertices);
+      let rec = [{
+        x: x - 1,
+        y: y - 0.5
+      }, {
+        x: dx + 1,
+        y: y - 0.5
+      }, {
+        x: dx + 1,
+        y: height
+      }, {
+        x: x - 1,
+        y: height
+      }];
+      this.clipShapes.push(rec);
+
+    }
+  }
+  createClippingPaths() {
+    let p;
+    for (let verts of this.clipShapes) {
+      p = new Path2D();
+      for (let i = 0; i < verts.length; i++) {
+        if (i == 0) {
+          p.moveTo(verts[i].x, verts[i].y)
+        } else {
+          p.lineTo(verts[i].x, verts[i].y);
+        }
+      }
+      this.clipPaths.addPath(p);
+    }
+  }
+  drawClipped() {
+    this.ctx.clip(this.clipPaths);
+    let sand = this.sandImg;
+    let stone = this.stoneImg;
+    image(sand, 0, height - sand.height - stone.height, width, sand.height);
+    image(stone, 0, height - stone.height, width, stone.height);
+    // let img = this.sandImg;
+    // for (let i = 0; i < width / img.width; i++) {
+    //   image(img, i * img.width, height / 1.25, img.width, height / 20)
+    // }
+    // img = this.stoneImg;
+    // for (let i = 0; i < width / img.width; i++) {
+    //   image(img, i * img.width, height / 1.175, img.width, height / 5)
+    // }
+  }
+
+  drawBackground() {
+    push();
+    let gradient = this.ctx.createLinearGradient(width / 2, height / 10, width / 2, height);
+    // Add three color stops
+    gradient.addColorStop(0.2, '#153142');
+    gradient.addColorStop(0.7, '#074A53');
+    gradient.addColorStop(1, '#0A6162');
+    // Set the fill style and draw a rectangle
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, width, height);
+    pop();
+  }
+
+
+
+
 }

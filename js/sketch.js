@@ -15,6 +15,7 @@ let images;
 let isPaused = false;
 let world;
 let floor;
+let volocano;
 let field;
 let fields = [];
 let bodies = [];
@@ -23,10 +24,11 @@ let properties;
 let shape;
 let shapes = ['circle', 'trap', 'polygon', 'rect', 'tri'];
 let path;
+let ps;
 let matterMouse;
 let mConstraint;
 let globalDriftVector = p5.Vector.random2D(); //.normalize().mult(0.00006);
-let reducer = 0.00004;
+let reducer = 0.00003;
 
 function preload() {
   images = new ImageData();
@@ -35,12 +37,13 @@ function preload() {
 function setup() {
   const canvas = createCanvas(900, 600);
   setEngine(canvas);
+  ps = new ParticleSystems();
+  //ps.constructSystem(width / 2, height * 0.85, 20, 5);
   floor = new PerlinFloor(140, 70);
+  volcano = new Volcanoes(ps, floor, 130, 200);
   images.setContext(floor);
-  images.createClippingPaths();
-  field = new ForceContainer(450, height - 120, 120, 170, createVector(0, -1));
-  fields.push(field);
-  //  fillFields();
+  //field = new ForceContainer(450, height - 120, 120, 170, createVector(0, -1));
+  //fields.push(field);
   for (let i = 0; i < 40; i++) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     addRandomOfType(shapeName);
@@ -50,23 +53,14 @@ function setup() {
 //TODO check if Continuous collisions is implemented now
 //main loop
 function draw() {
-
   images.drawBackground();
-  push();
-  images.drawClipped();
-  //images.drawClippingRegions();
-  //images.drawUnderClipping();
-  pop();
-  //field.x = mouseX;
-  //field.y = mouseY;
-  field.show(12);
-  //floor.show();
+  //field.show(12);
   if (vehicles.length < 120) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     let shape = addRandomOfType(shapeName);
     //let shape = addTriangle();
   }
-  globalDriftVector.rotate(map(noise(frameCount * 100), 0, 1, -PI / 2, PI / 2));
+  globalDriftVector.rotate(map(noise(frameCount * 100), 0, 1, -PI / 6, PI / 6));
 
   Engine.update(engine);
   for (let i = vehicles.length - 1; i >= 0; i--) {
@@ -84,6 +78,9 @@ function draw() {
           //  Body.applyForce(shape.body, shape.body.position, field.acc);
         }
       }
+      if (shape.isContained(volcano.field.x, volcano.field.y, volcano.field.width, volcano.field.height) && volcano.isVenting) {
+        volcano.field.applyForce(shape);
+      }
       shape.show();
       //shape.showVector();
       //drives toward a shape with similar area
@@ -91,6 +88,9 @@ function draw() {
       //shape.seek(shape.target);
     }
   }
+  volcano.showCracks(images);
+  volcano.update();
+  ps.run();
   if (isPaused) {
     showForces();
     for (let f of fields) {
@@ -229,10 +229,11 @@ function bodyForce(body) {
 function mousePressed() {
   // console.log(field.x + ',' + field.y + ',' + field.width + ',' + field.height);
   // console.log(vehicles[0].body.position);
-  isPaused = !isPaused;
-  if (!isPaused) {
-    loop();
-  }
+  volcano.update();
+  //  isPaused = !isPaused;
+  //  if (!isPaused) {
+  //    loop();
+  //}
 }
 
 function addMotes() {

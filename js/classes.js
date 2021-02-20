@@ -194,6 +194,7 @@ class Vehicle extends ShapeFromType {
 //each section of the floor is a triangle. The 1st two vertices are always the bottom two points
 class PerlinFloor {
   constructor(qty, peakHeight) {
+    this.peakHeight = peakHeight;
     this.hsl = {
       h: 222,
       s: 40,
@@ -460,15 +461,233 @@ class Mote {
 }
 
 class Volcanoes {
-  constructor(frequency, lifespan, magnitude, drift) {
+  constructor(ps, floor, frequency, lifespan, magnitude) {
+    //TODO change height to porportional, and below screen
+    this.ps = ps;
+    this.floorHeight = floor.peakHeight;
     this.freq = frequency;
-    this.life = lifespan;
-    this.acc = acc;
+    this.lifespan = lifespan;
+    this.mag = magnitude;
+    this.field = new ForceContainer(-100, -200, 400, 270, createVector(0, -1));
+    this.reset();
+  }
+  reset() {
+    this.pos = createVector(random(width * 0.1, width * 0.9), height + 15);
+    this.life = this.lifespan;
+    this.isErupted = false;
+    this.isVenting = false;
+    this.tris = [];
+    this.vent = null;
+    this.clipPath = new Path2D();
+    let a = {};
+    let b = {};
+    let c = {};
+    a.x = this.pos.x - 10;
+    a.y = height + 15;
+    b.x = this.pos.x + 10;
+    b.y = height + 15;
+    c.x = this.pos.x + random(12, 15);
+    c.y = this.pos.y - random(10, 24);
+    this.tris.push({
+      a: a,
+      b: b,
+      c: c
+    });
   }
   erupt() {
+    if (this.ps.systems.indexOf(this.vent) == -1) {
+      this.life--;
+      this.isVenting = false;
+    }
+    if (this.life < 0) {
+      this.reset();
+    }
+  }
+  addEmitter(pos) {
+    this.vent = this.ps.constructSystem(pos.x, pos.y, 20, 500, 5);
+    this.isVenting = true;
+    this.field.x = pos.x;
+    this.field.y = pos.y - height / 8;
+  }
+  update() {
+    if (this.isErupted) {
+      this.erupt();
+      //console.log('ERUPTED');
+
+    } else {
+      for (let tri of this.tris) {
+        //if (random() < 0.5) {
+        this.expandCrack(tri);
+        //}
+      }
+      if (frameCount % this.freq == 0) {
+        this.crack();
+      }
+    }
+  }
+  expandCrack(tri) {
+    let centroid = createVector((tri.a.x + tri.b.x + tri.c.x) / 3,
+      (tri.a.y + tri.b.y + tri.c.y) / 3);
+    let cv = createVector(tri.c.x - centroid.x, tri.c.y - centroid.y);
+    cv.mult(1.005);
+    let newPos = centroid.add(cv);
+    tri.c.x = newPos.x;
+    tri.c.y = newPos.y;
+    let floorHeight = height - this.floorHeight * 0.25 - map(noise(tri.c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
+    if (tri.c.y < floorHeight) {
+      tri.c.y = floorHeight;
+      this.isErupted = true;
+      this.addEmitter(tri.c);
+    }
+    if (tri.a.y > tri.b.y) {
+      tri.a.y -= 0.03;
+      tri.b.y += 0.03;
+    } else {
+      tri.b.y -= 0.03;
+      tri.a.y += 0.03;
+    }
+    if (tri.a.x > tri.b.x) {
+      tri.a.x += 0.03;
+      tri.b.x -= 0.03;
+    } else {
+      tri.a.x -= 0.03;
+      tri.b.x += 0.03;
+    }
+  }
+  crack() {
+    let tri = random(this.tris);
+    let xRange = [random(-20, -10), random(10, 20)];
+    let lowRatio = random(0.6, 0.7);
+    let highRatio = random(0.8, 0.9);
+    let p;
+    let a = {};
+    let b = {};
+    let c = {};
+    if (random() > 0.5) {
+      p = tri.a;
+    } else {
+      p = tri.b;
+    }
+    let dx = tri.c.x - p.x;
+    let dy = tri.c.y - p.y;
+    //let dist = Math.sqrt(dx * dx + dy * dy);
+    // console.log(dx + ',' + dy + ',' + dist);
+    // console.log((dx * 0.2 / dist) + ',' + (dy * 0.2 / dist) + ',' + dist);
+    a.x = p.x + dx * lowRatio;
+    a.y = p.y + dy * lowRatio;
+    b.x = p.x + dx * highRatio;
+    b.y = p.y + dy * highRatio;
+
+    // if (a.y > b.y) {
+    //   c.x = b.x;
+    //   c.y = a.y;
+    // } else {
+    //   c.x = a.x;
+    //   c.y = b.y;
+    // }
+    c.x = tri.c.x + random(xRange);
+    c.y = tri.c.y - random(10, 14);
+    let floorHeight = height - this.floorHeight * 0.25 - map(noise(c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
+    if (c.y < floorHeight) {
+      c.y = floorHeight;
+      this.isErupted = true;
+      this.addEmitter(c);
+    }
+    this.tris.push({
+      a: a,
+      b: b,
+      c: c
+    });
 
   }
+  showCracks(images) {
+    // let clipPath = new Path2D();
+    let ctx = drawingContext;
+    // images.createClippingPaths(this.tris, clipPath);
+    // ctx.clip(clipPath);
+    // let lava = images.lavaImg;
+    // image(lava, width / 2, height - lava.height / 2, lava.width, lava.height);
+    push();
+    noStroke();
+    ctx.globalAlpha = map(this.life, 0, this.lifespan, 0.0, 1.0);
+    ctx.fillStyle = images.pattern;
+    for (let v of this.tris) {
+      beginShape();
+      vertex(v.a.x, v.a.y);
+      vertex(v.c.x, v.c.y);
+      vertex(v.b.x, v.b.y);
+      endShape(CLOSE);
+    }
+    pop();
+    // if (this.isVenting) {
+    //   this.field.show(12);
+    // }
+  }
 
+}
+class ParticleSystems {
+  constructor() {
+    this.systems = [];
+  }
+  constructSystem(x, y, size, span, rate) {
+    let emitter = {
+      origin: createVector(x, y),
+      size: size,
+      start: frameCount,
+      span: span,
+      rate: rate,
+      particles: []
+    };
+    this.systems.push(emitter);
+    emitter.particles.push(new Particle(emitter));
+    return emitter;
+  }
+  run() {
+    let emitter;
+    let particle;
+    for (let i = this.systems.length - 1; i >= 0; i--) {
+      emitter = this.systems[i];
+      if (emitter.particles.length <= 0) {
+        this.systems.splice(i, 1);
+      } else if (frameCount % emitter.rate == 0 && frameCount < emitter.start + emitter.span) {
+        emitter.particles.push(new Particle(emitter));
+      }
+      for (let j = emitter.particles.length - 1; j >= 0; j--) {
+        particle = emitter.particles[j];
+        particle.update();
+        if (particle.lifeSpan <= 0) {
+          emitter.particles.splice(j, 1);
+        } else {
+          particle.show();
+        }
+      }
+    }
+  }
+
+}
+
+class Particle {
+  constructor(emitter) {
+    this.size = emitter.size;
+    this.origin = emitter.origin;
+    this.lifeSpan = 200;
+    this.vel = createVector(random(-0.2, 0.2), random(-2, -0.2));
+    this.acc = createVector(random(-0.01, 0.01), random(-0.06, -0.02));
+    this.pos = createVector(emitter.origin.x + random(-4, 4), emitter.origin.y + random(-6, 0));
+  }
+  update() {
+    this.lifeSpan -= 2;
+    this.size = this.size * 0.995;
+    this.pos = this.pos.add(this.vel);
+    this.vel = this.vel.add(this.acc);
+  }
+  show() {
+    push();
+    noStroke();
+    fill(255, this.lifeSpan);
+    ellipse(this.pos.x, this.pos.y, random(this.size * 0.90, this.size * 2), random(this.size * 0.90, this.size * 2));
+    pop();
+  }
 }
 //expected use: forceVector = a unit vector. in applying a force, reduce by .reducer
 class ForceContainer {
@@ -478,7 +697,7 @@ class ForceContainer {
     this.width = w;
     this.height = h;
     this.reducer = 0.0001;
-    this.maxDeflection = PI / 3;
+    this.maxDeflection = PI / 2;
     this.maxDrift = 3;
     if (forceVector == null) {
       this.acc = Matter.Vector.create(random(-1, 1), random(-1, 1));
@@ -497,7 +716,8 @@ class ForceContainer {
     let dest = createVector(this.acc.x, this.acc.y);
     dest.rotate(angle);
     let mForce = Matter.Vector.create(dest.x, dest.y);
-    mForce = Matter.Vector.mult(mForce, this.reducer);
+    let sideReducer = map(abs(this.x - shape.body.position.x), 0, this.width, 1, 0.15);
+    mForce = Matter.Vector.mult(mForce, this.reducer * sideReducer);
     shape.applyForce(shape.body.position, createVector(mForce.x, mForce.y));
   }
   perlinShift() {
@@ -564,7 +784,9 @@ class ImageData {
     this.clipShapes = [];
     this.clipPaths = new Path2D();
     //credit to "LuminousDragonGames"
-    this.img = loadImage('img/lava.png');
+    this.lavaImg = loadImage('img/lavaTiled.png');
+    this.nonP5Lava = new Image();
+    this.nonP5Lava.src = 'img/lavaTiled.png';
     //no credit
     this.sandImg = loadImage('img/sandTiled.png');
     //non-required credit to http://www.benkyoustudio.com
@@ -577,6 +799,8 @@ class ImageData {
     let dx = null;
     let y = null;
     this.ctx = drawingContext;
+    this.pattern = this.ctx.createPattern(this.nonP5Lava, 'repeat');
+
     for (let tri of floor.bodies) {
       x = min(tri.vertices[0].x, tri.vertices[1].x, tri.vertices[2].x);
       dx = max(tri.vertices[0].x, tri.vertices[1].x, tri.vertices[2].x);
@@ -598,10 +822,11 @@ class ImageData {
       this.clipShapes.push(rec);
 
     }
+    this.createClippingPaths(this.clipShapes, this.clipPaths);
   }
-  createClippingPaths() {
+  createClippingPaths(clipShapes, clipPaths) {
     let p;
-    for (let verts of this.clipShapes) {
+    for (let verts of clipShapes) {
       p = new Path2D();
       for (let i = 0; i < verts.length; i++) {
         if (i == 0) {
@@ -610,23 +835,8 @@ class ImageData {
           p.lineTo(verts[i].x, verts[i].y);
         }
       }
-      this.clipPaths.addPath(p);
+      clipPaths.addPath(p);
     }
-  }
-  drawClipped() {
-    this.ctx.clip(this.clipPaths);
-    let sand = this.sandImg;
-    let stone = this.stoneImg;
-    image(sand, 0, height - sand.height - stone.height, width, sand.height);
-    image(stone, 0, height - stone.height, width, stone.height);
-    // let img = this.sandImg;
-    // for (let i = 0; i < width / img.width; i++) {
-    //   image(img, i * img.width, height / 1.25, img.width, height / 20)
-    // }
-    // img = this.stoneImg;
-    // for (let i = 0; i < width / img.width; i++) {
-    //   image(img, i * img.width, height / 1.175, img.width, height / 5)
-    // }
   }
 
   drawBackground() {
@@ -639,10 +849,15 @@ class ImageData {
     // Set the fill style and draw a rectangle
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, width, height);
+    this.drawClipped();
+
     pop();
   }
-
-
-
-
+  drawClipped() {
+    this.ctx.clip(this.clipPaths);
+    let sand = this.sandImg;
+    let stone = this.stoneImg;
+    image(sand, 0, height - sand.height - stone.height, width, sand.height);
+    image(stone, 0, height - stone.height, width, stone.height);
+  }
 }

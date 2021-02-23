@@ -12,6 +12,7 @@ const Engine = Matter.Engine,
   Bodies = Matter.Bodies;
 let engine;
 let images;
+let skyAngle;
 let isPaused = false;
 let world;
 let floor;
@@ -28,7 +29,7 @@ let ps;
 let matterMouse;
 let mConstraint;
 let globalDriftVector = p5.Vector.random2D(); //.normalize().mult(0.00006);
-let reducer = 0.00003;
+let reducer = 0.0000003;
 
 function preload() {
   images = new ImageData();
@@ -42,8 +43,8 @@ function setup() {
   floor = new PerlinFloor(140, 70);
   volcano = new Volcanoes(ps, floor, 130, 200);
   images.setContext(floor);
-  //field = new ForceContainer(450, height - 120, 120, 170, createVector(0, -1));
-  //fields.push(field);
+  skyColor = new DayCycle();
+  skyAngle = random(720);
   for (let i = 0; i < 40; i++) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     addRandomOfType(shapeName);
@@ -53,9 +54,10 @@ function setup() {
 //TODO check if Continuous collisions is implemented now
 //main loop
 function draw() {
+  let ctx = drawingContext;
   images.drawBackground();
   //field.show(12);
-  if (vehicles.length < 120) {
+  if (vehicles.length < 200) {
     let shapeName = shapes[Math.floor(random(shapes.length))];
     let shape = addRandomOfType(shapeName);
     //let shape = addTriangle();
@@ -88,9 +90,11 @@ function draw() {
       //shape.seek(shape.target);
     }
   }
+  //skyAngle is time of day at beginning
+  ps.run();
+  lightCycle(skyAngle);
   volcano.showCracks(images);
   volcano.update();
-  ps.run();
   if (isPaused) {
     showForces();
     for (let f of fields) {
@@ -98,6 +102,65 @@ function draw() {
     }
     noLoop();
   }
+}
+
+function lightCycle(start) {
+  let scroll;
+  let dayLength = 8500;
+  let r = 252;
+  let g = 151;
+  let b = 53;
+  let c = color('rgba(' + r + '%, ' + g + '%, ' + b + '%, 0.2)');
+  push();
+  let angle = map((frameCount + start) % dayLength, 0, dayLength, 0, 720);
+  //dusk rotates CCW into scene from right, transLight is rotated to imitate dusk
+  if (angle < 90) {
+    translate(width, height);
+    rotate(radians(90 - angle));
+    image(images.transLight, -images.transLight.width, -images.transLight.height);
+    //c = color('rgba(252%, 156%, 84%, 0.2)');
+    rotate(-radians(90 - angle));
+    translate(-width, -height);
+
+    //night descends
+  } else if (angle < 360) {
+    translate(width, height);
+    let scroll = map(angle, 90, 180, 0, images.nightImg.height);
+    image(images.transLight, -images.transLight.width, -images.transLight.height + scroll);
+    image(images.nightImg, -images.nightImg.width, min(scroll - images.nightImg.height * 2, -images.nightImg.height));
+    translate(-width, -height);
+    //night rotates CCW out of scene and is replaced by dawn from bottom
+  } else if (angle < 450) {
+    translate(0, height);
+    rotate(-radians(angle - 360));
+    image(images.nightImg, 0, -images.nightImg.height);
+    image(images.transLight, 0, 0);
+    rotate(radians(angle - 360));
+    translate(0, -height);
+    //dawn exits scene to the left, transLight is rotated to imitate dawn
+  } else if (angle < 720) {
+    translate(0, height);
+    let scroll = map(angle, 450, 540, 0, width);
+    rotate(-PI / 2);
+    image(images.transLight, 0, -scroll);
+    //c = color('rgba(253%, 94%, 83%, 0.2)');
+    rotate(PI / 2);
+    translate(0, -height);
+
+  } else {
+    console.log(angle + ': ERROR');
+  }
+  blendMode(SOFT_LIGHT);
+  noStroke();
+  //c = color('rgba(' + r + '%, ' + g + '%, ' + b + '%, 0.2)');
+  c = skyColor.getColor(angle);
+  if (c == null) {
+    console.log('null color');
+  }
+  fill(c);
+  rect(0, 0, width, height);
+  pop();
+
 }
 
 function setEngine(canvas) {
@@ -170,9 +233,9 @@ function addRandomOfType(type) {
     y: random(-20, -10)
   };
   //console.log('Add Random: ' + type);
-  let h = random(12, 35);
-  let w = random(12, 35);
-  let r = random(8, 17);
+  let h = random(12, 35) / 5;
+  let w = random(12, 35) / 5;
+  let r = random(8, 17) / 5;
   let sides = random(5, 11);
   let slope = random(0.25, 0.75);
   switch (type) {

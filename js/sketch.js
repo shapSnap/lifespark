@@ -106,7 +106,7 @@ function draw() {
 
 function lightCycle(start) {
   let scroll;
-  let dayLength = 8500;
+  let dayLength = 3800;
   let r = 252;
   let g = 151;
   let b = 53;
@@ -123,24 +123,24 @@ function lightCycle(start) {
     translate(-width, -height);
 
     //night descends
-  } else if (angle < 360) {
+  } else if (angle < 320) {
     translate(width, height);
     let scroll = map(angle, 90, 180, 0, images.nightImg.height);
     image(images.transLight, -images.transLight.width, -images.transLight.height + scroll);
     image(images.nightImg, -images.nightImg.width, min(scroll - images.nightImg.height * 2, -images.nightImg.height));
     translate(-width, -height);
     //night rotates CCW out of scene and is replaced by dawn from bottom
-  } else if (angle < 450) {
+  } else if (angle < 410) {
     translate(0, height);
-    rotate(-radians(angle - 360));
+    rotate(-radians(angle - 320));
     image(images.nightImg, 0, -images.nightImg.height);
     image(images.transLight, 0, 0);
-    rotate(radians(angle - 360));
+    rotate(radians(angle - 320));
     translate(0, -height);
     //dawn exits scene to the left, transLight is rotated to imitate dawn
   } else if (angle < 720) {
     translate(0, height);
-    let scroll = map(angle, 450, 540, 0, width);
+    let scroll = map(angle, 410, 500, 0, width);
     rotate(-PI / 2);
     image(images.transLight, 0, -scroll);
     //c = color('rgba(253%, 94%, 83%, 0.2)');

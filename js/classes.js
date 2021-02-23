@@ -780,8 +780,9 @@ class DayCycle {
   constructor() {
     this.states = [];
     let states = this.states;
-
-    states.push({
+    let state;
+    // dusk begins
+    states.push(state = {
       start: 0,
       end: 15,
       r1: 252,
@@ -791,152 +792,170 @@ class DayCycle {
       g2: 121,
       b2: 53
     });
-    states.push({
-      start: 15,
+    states.push(state = {
+      start: state.end,
       end: 30,
-      r1: 241,
-      g1: 121,
-      b1: 53,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 214,
       g2: 97,
       b2: 62
     });
-    states.push({
-      start: 30,
+    states.push(state = {
+      start: state.end,
       end: 45,
-      r1: 214,
-      g1: 97,
-      b1: 62,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 181,
       g2: 68,
       b2: 74
     });
-    states.push({
-      start: 45,
+    states.push(state = {
+      start: state.end,
       end: 60,
-      r1: 181,
-      g1: 68,
-      b1: 74,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 148,
       g2: 39,
       b2: 85
     });
-    states.push({
-      start: 60,
+    states.push(state = {
+      start: state.end,
       end: 75,
-      r1: 148,
-      g1: 39,
-      b1: 85,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 134,
       g2: 26,
       b2: 88
     });
-    states.push({
-      start: 75,
+    // dusk ends
+    states.push(state = {
+      start: state.end,
       end: 90,
-      r1: 148,
-      g1: 39,
-      b1: 85,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 134,
       g2: 26,
       b2: 88
     });
-    states.push({
-      start: 90,
-      end: 345,
-      r1: 134,
-      g1: 26,
-      b1: 88,
+    // night descends
+    states.push(state = {
+      start: state.end,
+      end: 180,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 114,
       g2: 9,
       b2: 94
     });
-    states.push({
-      start: 345,
-      end: 360,
-      r1: 114,
-      g1: 9,
-      b1: 94,
+    // night
+    states.push(state = {
+      start: state.end,
+      end: 320,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 21,
       g2: 40,
       b2: 82
     });
-    states.push({
-      start: 360,
-      end: 375,
-      r1: 21,
-      g1: 40,
-      b1: 82,
-      r2: 75,
-      g2: 61,
-      b2: 96
+    //dawn starts to break
+    states.push(state = {
+      start: state.end,
+      end: 335,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 89,
+      g2: 29,
+      b2: 72
     });
-    states.push({
-      start: 375,
-      end: 390,
-      r1: 75,
-      g1: 61,
-      b1: 96,
-      r2: 255,
-      g2: 60,
-      b2: 60
+    states.push(state = {
+      start: state.end,
+      end: 350,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 104,
+      g2: 16,
+      b2: 68
     });
-    states.push({
-      start: 390,
-      end: 405,
-      r1: 255,
-      g1: 60,
-      b1: 60,
-      r2: 252,
-      g2: 156,
-      b2: 84
+    states.push(state = {
+      start: state.end,
+      end: 365,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 147,
+      g2: 14,
+      b2: 18
     });
-    states.push({
-      start: 405,
-      end: 420,
-      r1: 253,
-      g1: 94,
-      b1: 83,
-      r2: 252,
-      g2: 156,
-      b2: 84
+    states.push(state = {
+      start: state.end,
+      end: 380,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 230,
+      g2: 37,
+      b2: 36
     });
-    states.push({
-      start: 420,
-      end: 435,
-      r1: 252,
-      g1: 156,
-      b1: 84,
-      r2: 255,
-      g2: 227,
-      b2: 115
+    states.push(state = {
+      start: state.end,
+      end: 395,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 238,
+      g2: 108,
+      b2: 32
     });
-    states.push({
-      start: 435,
-      end: 450,
-      r1: 255,
-      g1: 227,
-      b1: 115,
-      r2: 24,
-      g2: 121,
-      b2: 53
-    });
-    states.push({
-      start: 450,
-      end: 590,
-      r1: 24,
-      g1: 121,
-      b1: 53,
+
+    states.push(state = {
+      start: state.end,
+      end: 410,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 220,
-      g2: 220,
+      g2: 206,
+      b2: 50
+    });
+    // dawn fades to day
+
+    states.push(state = {
+      start: state.end,
+      end: 500,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 253,
+      g2: 230,
+      b2: 89
+    });
+
+    states.push(state = {
+      start: state.end,
+      end: 610,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
+      r2: 250,
+      g2: 250,
       b2: 220
     });
-    states.push({
-      start: 590,
+    states.push(state = {
+      start: state.end,
       end: 720,
-      r1: 220,
-      g1: 220,
-      b1: 220,
+      r1: state.r2,
+      g1: state.g2,
+      b1: state.b2,
       r2: 252,
       g2: 151,
       b2: 53
@@ -954,7 +973,7 @@ class DayCycle {
         r = map(a, s.start, s.end, s.r1, s.r2);
         g = map(a, s.start, s.end, s.g1, s.g2);
         b = map(a, s.start, s.end, s.b1, s.b2);
-        return color('rgba(' + r + '%, ' + g + '%, ' + b + '%, 0.2)');
+        return color('rgba(' + r + '%, ' + g + '%, ' + b + '%, 0.5)');
         //console.log(s.start);
       }
     }
@@ -1038,6 +1057,7 @@ class ImageData {
     // Set the fill style and draw a rectangle
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, width, height);
+    //  background(255);
     this.drawClipped();
 
     pop();

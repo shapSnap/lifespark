@@ -1,4 +1,4 @@
-class ShapeFromType {
+class Shape {
   constructor(properties) {
     this.properties = properties;
     this.create();
@@ -8,20 +8,23 @@ class ShapeFromType {
   }
   create() {
     let p = this.properties;
+    let options = {
+      label: p.label
+    }
     let t = p.type;
     let ratio = 0.9;
     switch (t) {
       case 'rect':
-        this.body = Bodies.rectangle(p.x, p.y, p.w, p.h);
+        this.body = Bodies.rectangle(p.x, p.y, p.w, p.h, options);
         break;
       case 'circle':
-        this.body = Bodies.circle(p.x, p.y, p.r);
+        this.body = Bodies.circle(p.x, p.y, p.r, options);
         break;
       case 'polygon':
-        this.body = Bodies.polygon(p.x, p.y, p.sides, p.r);
+        this.body = Bodies.polygon(p.x, p.y, p.sides, p.r, options);
         break;
       case 'trap':
-        this.body = Bodies.trapezoid(p.x, p.y, p.w, p.h, p.slope);
+        this.body = Bodies.trapezoid(p.x, p.y, p.w, p.h, p.slope, options);
         break;
       case 'tri':
         let path = '';
@@ -30,7 +33,7 @@ class ShapeFromType {
         //    '        -2                  0           0             -6                 2                0 '
         path = path + (p.x - p.w / 2) + ' ' + p.y + ' ' + p.x + ' ' + (p.y - p.h) + ' ' + (p.x + p.w / 2) + ' ' + p.y;
         let verts = new Vertices.fromPath(path);
-        this.body = Bodies.fromVertices(p.x, p.y - p.h / 2, verts);
+        this.body = Bodies.fromVertices(p.x, p.y - p.h / 2, verts, options);
         this.driveOffsetY = -p.h * ratio;
         break;
       case 'path':
@@ -62,7 +65,7 @@ class ShapeFromType {
   }
 }
 
-class Vehicle extends ShapeFromType {
+class Vehicle extends Shape {
   constructor(properties, list) {
     super(properties);
     this.maxForce = .0002;
@@ -287,7 +290,8 @@ class PerlinFloor {
     }
     let bodyV = new Vertices.fromPath(path);
     let options = {
-      isStatic: true
+      isStatic: true,
+      label: 'Floor'
     }
     //center the triangle's mass on the centroid of the tri
     return (Bodies.fromVertices(sumX / 3, sumY / 3, bodyV, options));
@@ -301,7 +305,7 @@ class PerlinFloor {
       fill(c.h, c.s, c.l);
       beginShape();
       for (let v of b.vertices) {
-        vertex(v.x, v.y);
+        curveVertex(v.x, v.y);
       }
       endShape(CLOSE);
       //rect(0, 0, this.w, this.h);
@@ -460,20 +464,22 @@ class Mote {
   }
 }
 
-class Volcanoes {
-  constructor(ps, floor, frequency, lifespan, magnitude) {
+class Volcano {
+  constructor(ps, chems, floor, frequency, lifespan, magnitude) {
     //TODO change height to porportional, and below screen
     this.ps = ps;
-    this.floorHeight = floor.peakHeight;
+    this.chems = chems;
+    this.floorHeight = floor.peakHeight - 20;
     this.freq = frequency;
     this.lifespan = lifespan;
     this.mag = magnitude;
-    this.field = new ForceContainer(-100, -200, 400, 270, createVector(0, -1));
+    this.field = new ForceContainer(-100, -200, 300, 270, createVector(0, -0.7));
     this.reset();
   }
   reset() {
     this.pos = createVector(random(width * 0.1, width * 0.9), height + 15);
     this.life = this.lifespan;
+    this.lifeMult = random(0.6, 1.5);
     this.isErupted = false;
     this.isVenting = false;
     this.tris = [];
@@ -498,8 +504,11 @@ class Volcanoes {
     if (this.ps.systems.indexOf(this.vent) == -1) {
       this.life--;
       this.isVenting = false;
+    } else if (!(frameCount % 40)) {
+      let pos = createVector(this.vent.origin.x + random(-25, 25), this.vent.origin.y - 120);
+      this.chems.add(new Si(pos));
     }
-    if (this.life < 0) {
+    if (this.life < 0 - this.lifespan * this.lifeMult) {
       this.reset();
     }
   }
@@ -533,7 +542,7 @@ class Volcanoes {
     let newPos = centroid.add(cv);
     tri.c.x = newPos.x;
     tri.c.y = newPos.y;
-    let floorHeight = height - this.floorHeight * 0.25 - map(noise(tri.c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
+    let floorHeight = height - this.floorHeight - map(noise(tri.c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
     if (tri.c.y < floorHeight) {
       tri.c.y = floorHeight;
       this.isErupted = true;
@@ -587,7 +596,7 @@ class Volcanoes {
     // }
     c.x = tri.c.x + random(xRange);
     c.y = tri.c.y - random(10, 14);
-    let floorHeight = height - this.floorHeight * 0.25 - map(noise(c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
+    let floorHeight = height - this.floorHeight - map(noise(c.x / 5), 0, 1, this.floorHeight * 0.50, this.floorHeight * 3);
     if (c.y < floorHeight) {
       c.y = floorHeight;
       this.isErupted = true;
@@ -609,7 +618,8 @@ class Volcanoes {
     // image(lava, width / 2, height - lava.height / 2, lava.width, lava.height);
     push();
     noStroke();
-    ctx.globalAlpha = map(this.life, 0, this.lifespan, 0.0, 1.0);
+    let life = max(0, this.life);
+    ctx.globalAlpha = map(life, 0, this.lifespan, 0.0, 1.0);
     ctx.fillStyle = images.pattern;
     for (let v of this.tris) {
       beginShape();
@@ -902,9 +912,9 @@ class DayCycle {
       r1: state.r2,
       g1: state.g2,
       b1: state.b2,
-      r2: 230,
-      g2: 37,
-      b2: 36
+      r2: 255,
+      g2: 10,
+      b2: 10
     });
     states.push(state = {
       start: state.end,
@@ -912,44 +922,44 @@ class DayCycle {
       r1: state.r2,
       g1: state.g2,
       b1: state.b2,
-      r2: 238,
-      g2: 108,
-      b2: 32
+      r2: 230,
+      g2: 36,
+      b2: 36
     });
 
-    states.push(state = {
-      start: state.end,
-      end: 410,
-      r1: state.r2,
-      g1: state.g2,
-      b1: state.b2,
-      r2: 220,
-      g2: 206,
-      b2: 50
-    });
+    // states.push(state = {
+    //   start: state.end,
+    //   end: 410,
+    //   r1: state.r2,
+    //   g1: state.g2,
+    //   b1: state.b2,
+    //   r2: 220,
+    //   g2: 206,
+    //   b2: 50
+    // });
     // dawn fades to day
 
-    states.push(state = {
-      start: state.end,
-      end: 500,
-      r1: state.r2,
-      g1: state.g2,
-      b1: state.b2,
-      r2: 253,
-      g2: 230,
-      b2: 89
-    });
+    // states.push(state = {
+    //   start: state.end,
+    //   end: 500,
+    //   r1: state.r2,
+    //   g1: state.g2,
+    //   b1: state.b2,
+    //   r2: 180,
+    //   g2: 200,
+    //   b2: 170
+    // });
 
-    states.push(state = {
-      start: state.end,
-      end: 610,
-      r1: state.r2,
-      g1: state.g2,
-      b1: state.b2,
-      r2: 250,
-      g2: 250,
-      b2: 220
-    });
+    // states.push(state = {
+    //   start: state.end,
+    //   end: 610,
+    //   r1: state.r2,
+    //   g1: state.g2,
+    //   b1: state.b2,
+    //   r2: 210,
+    //   g2: 160,
+    //   b2: 110
+    // });
     states.push(state = {
       start: state.end,
       end: 720,
@@ -1057,7 +1067,7 @@ class ImageData {
     // Set the fill style and draw a rectangle
     this.ctx.fillStyle = gradient;
     this.ctx.fillRect(0, 0, width, height);
-    //  background(255);
+    // background(140, 140, 255);
     this.drawClipped();
 
     pop();
